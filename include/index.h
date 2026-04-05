@@ -12,6 +12,7 @@ void insert_term(const char* word, int docID, int position);
 Posting* get_postings(char* word);
 int get_document_frequency(const char* word);
 int get_vocabulary_size(void);
+void debug_print_index();
 
 #endif
 
