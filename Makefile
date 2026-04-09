@@ -14,7 +14,8 @@ SRCS = \
 	$(SRC_DIR)/search.c \
 	$(SRC_DIR)/query_parser.c \
 	$(SRC_DIR)/ranking.c \
-	$(SRC_DIR)/trie.c
+	$(SRC_DIR)/trie.c \
+	$(SRC_DIR)/avl_tree.c
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
 TARGET = search_engine
 

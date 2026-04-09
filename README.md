@@ -3,8 +3,10 @@
 A **console-based search engine** that indexes legal documents from the `data/` folder (including subfolders like **judgments**, **contracts**, **acts**, **case_laws**) and supports:
 
 - **Inverted index** (word → posting list of documents + term frequencies)
+- **AVL Tree** (Metadata search: find documents by filename in O(log N))
+- **Max-Heap** (Efficient ranking: extracts Top-K results dynamically)
 - **Fast multi-keyword search** (default **AND** via posting list intersection)
-- **Ranking** by TF score: \(score = \sum term\_frequency\)
+- **Ranking** by TF-IDF or TF score: \(score = \sum term\_frequency\)
 - **Autocomplete** using a **Trie**
 
 Only standard C headers are used: `stdio.h`, `stdlib.h`, `string.h`, `ctype.h`.
@@ -31,15 +33,17 @@ include/
   trie.h
 
 src/
-  tokenizer.c
-  file_loader.c
-  index.c
-  query_parser.c
-  search.c
-  ranking.c
-  trie.c
-  main.c
+  src\tokenizer.c
+  src\file_loader.c
+  src\index.c
+  src\query_parser.c
+  src\search.c
+  src\ranking.c
+  src\trie.c
+  src\avl_tree.c
+  src\main.c
 
+IMPLEMENTED.md (Detailed ADS Guide)
 Makefile
 
 ```
@@ -74,7 +78,10 @@ This produces `search_engine` (or `search_engine.exe` on Windows).
 ### Option B: Direct GCC (Windows / MinGW)
 
 ```powershell
-gcc -Iinclude -Wall -Wextra -std=c99 -O2 -o search_engine.exe src\main.c src\tokenizer.c src\file_loader.c src\index.c src\search.c src\query_parser.c src\ranking.c src\trie.c
+gcc -Iinclude -Wall -Wextra -std=c99 -O2 -o search_engine.exe src\main.c src\tokenizer.c src\file_loader.c src\index.c src\search.c src\query_parser.c src\ranking.c src\trie.c src\avl_tree.c
+
+
+
 ```
 
 ---
@@ -105,6 +112,14 @@ Once running:
   - `contract OR criminal`
 - **Autocomplete (Trie)**:
   - `ac con`
+- **Metadata (AVL Trees)**:
+  - `meta doc1.txt`
+  - `tree` (View visual tree)
+- **Index Inspection**:
+  - `list <word>` (Show posting list for a word)
+  - `limit <N>` (Set Top-K result limit)
+- **Ranking Control**:
+  - `rank tf` | `rank tfidf`
 - **Quit**:
   - `quit`
 

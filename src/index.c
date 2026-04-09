@@ -198,6 +198,29 @@ int get_vocabulary_size(void)
     return count;
 }
 
+void debug_word(const char *word) {
+    if (!word) return;
+    unsigned long bucket = 0;
+    WordEntry *e = find_entry(word, &bucket);
+    
+    printf("\n--- INVERTED INDEX DEBUG: '%s' ---\n", word);
+    if (!e) {
+        printf("Word not found in index.\n");
+        return;
+    }
+
+    printf("Hash Bucket: %lu\n", bucket);
+    printf("Doc Frequency: %d\n", e->documentFrequency);
+    printf("Posting List (Linked List):\n");
+    
+    Posting *p = e->postingList;
+    while (p) {
+        printf("  [DocID: %d | Freq: %d] --> ", p->docID, p->frequency);
+        p = p->next;
+    }
+    printf("NULL\n\n");
+}
+
 void debug_print_index()
 {
     printf("\n===== FULL INVERTED INDEX =====\n");

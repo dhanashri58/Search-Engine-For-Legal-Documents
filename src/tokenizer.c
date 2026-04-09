@@ -7,6 +7,7 @@
 #include "index.h"
 #include "trie.h"
 #include "file_loader.h"
+#include "avl_tree.h"
 
 #define MAX_LINE 8192
 
@@ -15,6 +16,7 @@ static int g_doc_cap = 0;
 static char** g_doc_labels = NULL; /* 1-indexed */
 static char** g_doc_texts = NULL;  /* 1-indexed */
 static long long g_total_tokens_indexed = 0;
+static AVLNode* g_avl_root = NULL; /* Metadata Tree (AVL) */
 
 static int ensure_doc_capacity(int needed_docID) {
     if (needed_docID <= g_doc_cap) return 1;
@@ -180,6 +182,8 @@ static void free_docs(void) {
     }
     g_doc_count = 0;
     g_total_tokens_indexed = 0;
+    avl_free(g_avl_root);
+    g_avl_root = NULL;
 }
 
 int get_document_count(void) {
@@ -194,6 +198,25 @@ const char* get_document_label(int docID) {
 const char* get_document_text(int docID) {
     if (docID <= 0 || docID > g_doc_count) return NULL;
     return g_doc_texts ? g_doc_texts[docID] : NULL;
+}
+
+int get_docID_by_label(const char* label) {
+    if (!label) return -1;
+    AVLNode* node = avl_search(g_avl_root, label);
+    if (node) {
+        return node->docID;
+    }
+    return -1;
+}
+
+void print_metadata_tree(void) {
+    printf("\n===== AVL METADATA TREE STRUCTURE =====\n");
+    if (!g_avl_root) {
+        printf("(Tree is empty)\n");
+    } else {
+        avl_print_visual(g_avl_root, 0);
+    }
+    printf("========================================\n\n");
 }
 
 long long get_total_tokens_indexed(void) {
@@ -228,8 +251,17 @@ static void index_doc_text(const char* label, const char* text) {
         char tmp[DOC_LABEL_MAX_LEN];
         snprintf(tmp, sizeof(tmp), "DOC%d", docID);
         g_doc_labels[docID] = (char*)malloc(strlen(tmp) + 1);
-        if (g_doc_labels[docID]) strcpy(g_doc_labels[docID], tmp);
+        if (g_doc_labels[docID]) {
+            strcpy(g_doc_labels[docID], tmp);
+        }
     }
+
+    /* Unit 1: Insert into AVL Metadata Tree for fast searching by name */
+    const char* last_s = strrchr(g_doc_labels[docID], '\\');
+    if (!last_s) last_s = strrchr(g_doc_labels[docID], '/');
+    const char* filename = last_s ? last_s + 1 : g_doc_labels[docID];
+    
+    g_avl_root = avl_insert(g_avl_root, filename, docID);
 
     g_doc_texts[docID] = (char*)malloc(strlen(text) + 1);
     if (g_doc_texts[docID]) strcpy(g_doc_texts[docID], text);
@@ -287,6 +319,13 @@ void tokenize_document(const char* filename) {
                 g_doc_labels[docID][copy] = '\0';
             }
         }
+
+        /* Unit 1: AVL Metadata indexing */
+        const char* last_s = strrchr(g_doc_labels[docID], '\\');
+        if (!last_s) last_s = strrchr(g_doc_labels[docID], '/');
+        const char* filename = last_s ? last_s + 1 : g_doc_labels[docID];
+
+        g_avl_root = avl_insert(g_avl_root, filename, docID);
 
         /* store full text (after ':') for display/snippets if desired */
         const char* body = colon + 1;

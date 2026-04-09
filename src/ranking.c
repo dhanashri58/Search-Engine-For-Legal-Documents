@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "ranking.h"
@@ -18,25 +19,27 @@ static void swap(SearchResult* a, SearchResult* b) {
     *b = t;
 }
 
-/* In-place quicksort by score desc, then docID asc. */
-static void qsort_results(SearchResult* arr, int left, int right) {
-    int i = left;
-    int j = right;
-    SearchResult pivot = arr[left + (right - left) / 2];
+/* 
+ * MAX-HEAP LOGIC (Unit 2: Heaps and Priority Queues)
+ * Logic: Ensure parent is always greater than children.
+ */
+static void max_heapify(SearchResult* arr, int n, int i) {
+    int largest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
 
-    while (i <= j) {
-        while (arr[i].score > pivot.score ||
-               (arr[i].score == pivot.score && arr[i].docID < pivot.docID)) i++;
-        while (arr[j].score < pivot.score ||
-               (arr[j].score == pivot.score && arr[j].docID > pivot.docID)) j--;
-        if (i <= j) {
-            swap(&arr[i], &arr[j]);
-            i++;
-            j--;
-        }
+    if (left < n && (arr[left].score > arr[largest].score || 
+       (arr[left].score == arr[largest].score && arr[left].docID < arr[largest].docID)))
+        largest = left;
+
+    if (right < n && (arr[right].score > arr[largest].score || 
+       (arr[right].score == arr[largest].score && arr[right].docID < arr[largest].docID)))
+        largest = right;
+
+    if (largest != i) {
+        swap(&arr[i], &arr[largest]);
+        max_heapify(arr, n, largest);
     }
-    if (left < j) qsort_results(arr, left, j);
-    if (i < right) qsort_results(arr, i, right);
 }
 
 void rank_results(SearchResult* results, int count) {
@@ -45,7 +48,21 @@ void rank_results(SearchResult* results, int count) {
 
 void rank_results_mode(SearchResult* results, int count, RankingMode mode) {
     if (!results || count <= 1) return;
-    (void)mode; /* scoring happens in search; ranking only sorts */
-    qsort_results(results, 0, count - 1);
+    (void)mode;
+
+    /* Step 1: Build Max-Heap (Rearrange array) */
+    for (int i = count / 2 - 1; i >= 0; i--) {
+        max_heapify(results, count, i);
+    }
+
+    /* Step 2: Extract top elements to the end of array (Heap Sort logic) */
+    for (int i = count - 1; i >= 0; i--) {
+        swap(&results[0], &results[i]);
+        max_heapify(results, i, 0);
+    }
+    
+    for (int i = 0; i < count / 2; i++) {
+        swap(&results[i], &results[count - 1 - i]);
+    }
 }
 

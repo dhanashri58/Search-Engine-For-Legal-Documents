@@ -27,6 +27,8 @@ void tokenize_free_tokens(char** tokens, int count);
 int get_document_count(void);
 const char* get_document_label(int docID);
 const char* get_document_text(int docID);
+int get_docID_by_label(const char* label);
+void print_metadata_tree(void);
 
 /* Total number of tokens processed during indexing. */
 long long get_total_tokens_indexed(void);

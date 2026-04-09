@@ -39,36 +39,51 @@ static void print_index_statistics(void)
     printf("Average document length: %.2f\n\n", avg_len);
 }
 
+static int g_limit = 10; /* Top-K results to display */
+
+static void print_help(void) {
+    printf("\n"
+           "+-------------------------------------------------------+\n"
+           "|        LEGAL SEARCH ENGINE - COMMAND CENTER           |\n"
+           "+-------------------------------------------------------+\n"
+           "| SEARCH COMMANDS:                                      |\n"
+           "|  - Just type keywords: Search (AND) e.g. 'contract'    |\n"
+           "|  - keyword OR keyword: Search (OR)                    |\n"
+           "|  - ac <prefix>       : Autocomplete (Trie)            |\n"
+           "|                                                       |\n"
+           "| ADS CONTROLS:                                         |\n"
+           "|  - meta <label>      : Metadata Search (AVL)          |\n"
+           "|  - tree              : View Metadata Tree (AVL)       |\n"
+           "|  - rank [tf|tfidf]   : Change Ranking Metric          |\n"
+           "|  - limit <N>         : Set Top-K display limit (Heap) |\n"
+           "|                                                       |\n"
+           "| UTILS:                                                |\n"
+           "|  - stats             : Index Statistics               |\n"
+           "|  - debug             : View Entire Index (Large)      |\n"
+           "|  - list <word>       : View Posting List of a word    |\n"
+           "|  - help              : Show this menu                 |\n"
+           "|  - quit              : Exit Application               |\n"
+           "+-------------------------------------------------------+\n");
+}
+
 int main(void)
 {
+    printf("\n[Initializing Engine...]\n");
     index_init();
     trie_init();
 
-    /* Index everything under data/ (recursive .txt crawl on Windows). */
     tokenize_directory("data");
     int n_docs = get_document_count();
-    if (n_docs <= 0)
-    {
-        printf("No documents indexed. Put .txt files under `data/` (including subfolders).\n");
-    }
-    else
-    {
-        printf("Search Engine Ready (%d documents indexed)\n", n_docs);
-    }
 
-    printf("Commands:\n");
-    printf("  - Enter keywords to search (default AND). Example: contract breach\n");
-    printf("  - Use OR for union. Example: contract OR criminal\n");
-    printf("  - Autocomplete: ac <prefix>   Example: ac con\n");
-    printf("  - Ranking mode: rank tf | rank tfidf\n");
-    printf("  - Index statistics: stats\n");
-    printf("  - Debug index: debug\n");
-    printf("  - Quit: quit\n\n");
+    printf("+-------------------------------------------------------+\n");
+    printf("| SEARCH ENGINE LOADED: %d documents indexed             |\n", n_docs);
+    printf("+-------------------------------------------------------+\n");
+    print_help();
 
     char line[1024];
     while (1)
     {
-        printf("Enter query: ");
+        printf("\nADS@Search >> ");
         if (!fgets(line, (int)sizeof(line), stdin))
             break;
         trim_newline(line);
@@ -77,6 +92,11 @@ int main(void)
 
         if (strcmp(line, "quit") == 0 || strcmp(line, "exit") == 0)
             break;
+
+        if (strcmp(line, "help") == 0) {
+            print_help();
+            continue;
+        }
 
         if (strcmp(line, "stats") == 0)
         {
@@ -90,70 +110,102 @@ int main(void)
             continue;
         }
 
+        if (starts_with(line, "list "))
+        {
+            char *word = line + 5;
+            while (*word == ' ') word++;
+            if (*word == '\0') {
+                printf("(usage) list <word>\n");
+                continue;
+            }
+            debug_word(word);
+            continue;
+        }
+
+        if (starts_with(line, "limit "))
+        {
+            int n = atoi(line + 6);
+            if (n > 0) {
+                g_limit = n;
+                printf("Result display limit set to: Top-%d\n", g_limit);
+            } else {
+                printf("(error) Please provide a valid number > 0\n");
+            }
+            continue;
+        }
+
         if (starts_with(line, "ac "))
         {
             char *prefix = line + 3;
-            while (*prefix == ' ')
-                prefix++;
-            if (*prefix == '\0')
-            {
+            while (*prefix == ' ') prefix++;
+            if (*prefix == '\0') {
                 printf("(usage) ac <prefix>\n");
                 continue;
             }
-            printf("Suggestions:\n");
+            printf("--- Trie Autocomplete Suggestions ---\n");
             autocomplete(prefix);
+            continue;
+        }
+
+        if (starts_with(line, "meta "))
+        {
+            char *label = line + 5;
+            while (*label == ' ') label++;
+            if (*label == '\0') {
+                printf("(usage) meta <filename>\n");
+                continue;
+            }
+            int id = get_docID_by_label(label);
+            if (id != -1) {
+                printf("AVL Result: '%s' found (ID: %d)\n", label, id);
+            } else {
+                printf("AVL Result: Document not found.\n");
+            }
+            continue;
+        }
+
+        if (strcmp(line, "tree") == 0)
+        {
+            print_metadata_tree();
             continue;
         }
 
         if (starts_with(line, "rank "))
         {
             char *mode = line + 5;
-            while (*mode == ' ')
-                mode++;
-            if (strcmp(mode, "tf") == 0)
-            {
+            while (*mode == ' ') mode++;
+            if (strcmp(mode, "tf") == 0) {
                 ranking_set_mode(RANK_TF);
-                printf("Ranking mode set to TF\n");
-            }
-            else if (strcmp(mode, "tfidf") == 0)
-            {
+                printf("Ranking Algorithm: TF (Term Frequency)\n");
+            } else if (strcmp(mode, "tfidf") == 0) {
                 ranking_set_mode(RANK_TFIDF);
-                printf("Ranking mode set to TF-IDF\n");
-            }
-            else
-            {
+                printf("Ranking Algorithm: TF-IDF (Advanced Retrieval)\n");
+            } else {
                 printf("(usage) rank tf | rank tfidf\n");
             }
             continue;
         }
 
+        /* DEFAULT: Search */
         SearchResult *results = NULL;
         int count = 0;
-        if (!search_query(line, &results, &count))
-        {
-            printf("Search failed (out of memory)\n");
+        if (!search_query(line, &results, &count)) {
+            printf("Error in search.\n");
             continue;
         }
 
-        if (count == 0)
-        {
-            printf("No results\n");
+        if (count == 0) {
+            printf("No results found for '%s'\n", line);
             free(results);
             continue;
         }
 
-        printf("\nResults:\n");
-        int top = count;
-        if (top > 10)
-            top = 10;
-        for (int i = 0; i < top; i++)
+        printf("\n--- Displaying Top %d of %d results ---\n", (count < g_limit ? count : g_limit), count);
+        for (int i = 0; i < count && i < g_limit; i++)
         {
             const char *label = get_document_label(results[i].docID);
-            if (!label)
-                label = "(unknown)";
-            printf("%s (score %.2f)\n", label, results[i].score);
+            printf("[%d] %s (Score: %.2f)\n", i + 1, label ? label : "Unknown", results[i].score);
         }
-        printf("\n");
 
         free(results);
     }
