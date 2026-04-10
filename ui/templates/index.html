@@ -3,42 +3,135 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Legal Document Search Engine</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>LexScope | Legal Document Search</title>
+    <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
-    <main class="page">
-        <section class="search-panel{% if results or error %} has-results{% endif %}">
-            <h1>Legal Document Search Engine</h1>
+    <main class="shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Legal Search Interface</p>
+                <h1>LexScope</h1>
+                <p class="hero-text">
+                    Search legal documents with a UI that actually reflects the project:
+                    inverted index for retrieval, AVL metadata lookup for filenames, and trie-powered autocomplete.
+                </p>
+                <p class="hero-note">
+                    Open this page through the Flask app for live search results. Opening the template file directly will show raw Jinja placeholders.
+                </p>
 
-            <form method="post" class="search-form">
-                <input
-                    type="text"
-                    name="query"
-                    class="search-box"
-                    placeholder="Search legal documents"
-                    value="{{ query }}"
-                    autocomplete="off"
-                    autofocus
-                    required
-                >
-                <button type="submit" class="search-button">Search</button>
-            </form>
+                <div class="capability-grid">
+                    <article class="capability-card">
+                        <span class="capability-label">Retrieval</span>
+                        <strong>Keyword Search</strong>
+                        <p>Run ranked searches across the indexed legal corpus.</p>
+                    </article>
+                    <article class="capability-card">
+                        <span class="capability-label">Metadata</span>
+                        <strong>AVL Lookup</strong>
+                        <p>Find documents by filename using the project’s tree-based metadata index.</p>
+                    </article>
+                    <article class="capability-card">
+                        <span class="capability-label">Assist</span>
+                        <strong>Trie Suggestions</strong>
+                        <p>Complete prefixes quickly for legal terms and frequent tokens.</p>
+                    </article>
+                </div>
+            </div>
 
-            {% if error %}
-            <section class="results">
-                <h2>Error</h2>
-                <pre class="results-output error">{{ error }}</pre>
-            </section>
-            {% endif %}
+            <aside class="control-panel">
+                <div class="panel-header">
+                    <p class="panel-kicker">Query Console</p>
+                    <h2>Run a Search</h2>
+                </div>
 
-            {% if results %}
-            <section class="results">
-                <h2>Results</h2>
-                <pre class="results-output">{{ results }}</pre>
-            </section>
+                <form method="post" class="search-form">
+                    <label for="query" class="input-label">Enter query or command</label>
+                    <textarea
+                        id="query"
+                        name="query"
+                        class="search-box"
+                        placeholder="Try: contract breach, privacy OR compliance, meta doc10.txt, ac con"
+                        autocomplete="off"
+                        autofocus
+                        required
+                    >{{ query }}</textarea>
+
+                    <button type="submit" class="search-button">Analyze Corpus</button>
+                </form>
+
+                <div class="query-examples">
+                    <p>Suggested queries</p>
+                    <div class="query-chip-list">
+                        {% for sample in sample_queries %}
+                        <button
+                            type="button"
+                            class="query-chip"
+                            onclick="document.getElementById('query').value='{{ sample }}'; document.getElementById('query').focus();"
+                        >
+                            {{ sample }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if response and response.doc_count %}
+                <div class="engine-meta">
+                    <span>Indexed Corpus</span>
+                    <strong>{{ response.doc_count }} documents</strong>
+                </div>
+                {% endif %}
+            </aside>
+        </section>
+
+        {% if error %}
+        <section class="feedback-panel error-panel">
+            <div class="panel-title-row">
+                <p class="panel-kicker">Execution Error</p>
+                <h2>Engine Could Not Complete The Request</h2>
+            </div>
+            <pre class="raw-output">{{ error }}</pre>
+        </section>
+        {% endif %}
+
+        {% if response %}
+        <section class="feedback-panel">
+            <div class="panel-title-row">
+                <p class="panel-kicker">Search Response</p>
+                <h2>{{ response.headline or "Engine Output" }}</h2>
+            </div>
+
+            {% if response.mode == "results" %}
+            <div class="result-list">
+                {% for item in response.results %}
+                <article class="result-card">
+                    <div class="result-rank">#{{ item.rank }}</div>
+                    <div class="result-body">
+                        <h3>{{ item.filename }}</h3>
+                        <p class="result-path">{{ item.path }}</p>
+                    </div>
+                    <div class="result-score">
+                        <span>Score</span>
+                        <strong>{{ item.score }}</strong>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% elif response.mode == "autocomplete" %}
+            <div class="suggestion-list">
+                {% for suggestion in response.suggestions %}
+                <span class="suggestion-chip">{{ suggestion }}</span>
+                {% endfor %}
+            </div>
+            {% elif response.mode == "metadata" or response.mode == "empty" %}
+            <div class="status-card">
+                <p>{{ response.message }}</p>
+            </div>
+            {% else %}
+            <pre class="raw-output">{{ response.message or response.raw }}</pre>
             {% endif %}
         </section>
+        {% endif %}
     </main>
 </body>
 </html>

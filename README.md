@@ -52,12 +52,16 @@ Makefile
 
 ## How indexing works
 
-- On **Windows**, the program **recursively crawls** the `data/` directory and indexes every `*.txt` file it finds.
+- On **Windows**, the program **recursively crawls** the `data/` directory and indexes supported files it finds.
 - Each file becomes one “document”.
 - Words are normalized:
   - lowercased
   - punctuation removed
   - tokenized on non-alphanumeric characters
+- Supported inputs:
+  - Direct text read: `.txt`, `.md`, `.csv`, `.json`, `.xml`, `.html`, `.htm`, `.log`
+  - PowerShell/.NET extraction: `.docx`, `.pptx`, `.xlsx`
+  - Best-effort Windows Word automation fallback: `.pdf`, `.doc`, `.rtf`
 
 The result list prints the **file path** as the document label, so you can see which folder it came from.
 
@@ -93,6 +97,18 @@ gcc -Iinclude -Wall -Wextra -std=c99 -O2 -o search_engine.exe src\main.c src\tok
 ```powershell
 .\search_engine.exe
 ```
+
+### Web UI
+
+Run the Flask interface from the project root:
+
+```powershell
+python ui\app.py
+```
+
+Then open `http://127.0.0.1:5000/`.
+
+If you open `ui\templates\index.html` directly in the browser, the Jinja template tags such as `{{ ... }}` and `{% ... %}` will appear as raw text because the file is not being rendered by Flask.
 
 ### Linux/macOS (if you later port directory crawl)
 
@@ -135,6 +151,7 @@ data\judgments\case_101.txt (score 2)
 
 ## Notes / limitations
 
-- This engine indexes **`.txt` files**. If your judgments/contracts are `.pdf`/`.docx`, convert them to `.txt` first (the project intentionally avoids non-standard libraries).
+- `.pdf`, `.doc`, and `.rtf` extraction is **best-effort**. On Windows, the loader first tries built-in tools and then falls back to Microsoft Word automation if Word is installed.
+- `.docx`, `.pptx`, and `.xlsx` extraction uses PowerShell + .NET ZIP/XML parsing, so heavily formatted files may lose layout but the searchable text is preserved.
 - `data\documents.txt` is treated as a legacy sample/manifest and is **skipped** during directory indexing.
 

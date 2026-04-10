@@ -6,7 +6,7 @@
 /* Index all documents contained in the input file. */
 void tokenize_document(const char* filename);
 
-/* Index all .txt files under a root directory (recursively on Windows). */
+/* Index supported document files under a root directory (recursively on Windows). */
 void tokenize_directory(const char* root_dir);
 
 /* Tokenize arbitrary text into normalized terms (lowercase, punctuation removed). */

@@ -5,7 +5,9 @@
 Directory/document loading abstraction.
 
 Today:
-- Windows-only recursive crawl using `dir /b /s "<root>\*.txt"` via popen.
+- Windows-only recursive crawl using `dir /b /s /a-d "<root>"` via popen.
+- Built-in readers for text-like files such as `.txt`, `.md`, `.csv`, `.json`.
+- Best-effort extractors for `.pdf`, `.doc`, `.docx`, `.rtf`, `.pptx`, `.xlsx`.
 
 Future:
 - Replace implementation with native directory APIs per platform.
